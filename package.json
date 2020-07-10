@@ -1,0 +1,19 @@
+{
+  "name": "bastard-promises",
+  "version": "1.0.0",
+  "description": "promises from scratch",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watchAll"
+  },
+  "keywords": [
+    "javascript",
+    "promises"
+  ],
+  "author": "Joao Lindgren",
+  "license": "MIT",
+  "dependencies": {
+    "jest": "^26.1.0"
+  }
+}
