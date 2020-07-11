@@ -1,7 +1,7 @@
 const state = {
-    PENDING: 'pending',
-    COMPLETED: 'completed',
-    FAILED: 'failed',
-}
+  PENDING: "pending",
+  FULFILLED: "fulfilled",
+  REJECTED: "rejected",
+};
 
 module.exports = state;
