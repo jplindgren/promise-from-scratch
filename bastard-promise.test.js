@@ -4,15 +4,14 @@ const getErrorObject = (message = "Promise has been rejected") => new Error(mess
 
 describe("Bastard Promises", () => {
   describe("Initialization", () => {
-    it("should be created with pending state", () => {
+    it("should be created in a pending state", () => {
       const promise = new BastardPromise(() => {});
       expect(promise.state).toBe("pending");
     });
 
     it("should be created with empty chained array", () => {
       const promise = new BastardPromise(() => {});
-      expect(promise.onFulFilledChain).toEqual([]);
-      expect(promise.onRejectedChain).toEqual([]);
+      expect(promise.chainQueue).toEqual([]);
     });
 
     it("should be created with undefned value", () => {
@@ -20,13 +19,19 @@ describe("Bastard Promises", () => {
       expect(promise._innerValue).toBeUndefined();
     });
 
-    it("should throw exception if argument is not a function", () => {
-      expect(() => new BastardPromise({ greeting: "hi" })).toThrow("Argument should be a function");
+    it("should throw exception if executor is not a function", () => {
+      expect(() => new BastardPromise({ data: "hi" })).toThrow(TypeError);
     });
   });
 
   describe("behavior", () => {
     describe("when fulFilled", () => {
+      it("should throw exception if then onFulFill is not a function", () => {
+        expect(() => new BastardPromise((resolve) => resolve("data")).then(null)).toThrow(
+          new TypeError("onFulFill is not a function")
+        );
+      });
+
       it("should resolved value be passed to then", (done) => {
         return new BastardPromise((resolve) => resolve({ data: 777 })).then(({ data }) => {
           expect(data).toBe(777);
@@ -183,24 +188,15 @@ describe("Bastard Promises", () => {
 
       it("should reject if one promise fail", (done) => {
         const thenFn = jest.fn();
-        const p1 = new BastardPromise(
-          (resolve, reject) => setTimeout(() => reject("error"), 10),
-          null,
-          "p1"
-        );
+        const p1 = new BastardPromise((_, reject) => setTimeout(() => reject("error"), 10));
         const p2 = new BastardPromise((resolve) => resolve("async"), null, "p2");
         return BastardPromise.all([p1, p2])
           .then(thenFn)
-          .catch(
-            (err) => {
-              console.log(err);
-              expect(err).toBe("error");
-              expect(thenFn).toHaveBeenCalledTimes(0);
-              done();
-            },
-            null,
-            "outside catch"
-          );
+          .catch((err) => {
+            expect(err).toBe("error");
+            expect(thenFn).toHaveBeenCalledTimes(0);
+            done();
+          });
       });
     }); //all
 

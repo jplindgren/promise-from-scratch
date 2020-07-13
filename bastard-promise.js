@@ -3,11 +3,11 @@ const state = require("./promise-states");
 // http://www.ecma-international.org/ecma-262/6.0/#sec-promise-constructor
 class BastardPromise {
   constructor(executor) {
-    if (typeof executor !== "function") throw new Error("Argument should be a function");
+    if (typeof executor !== "function")
+      throw new TypeError(`Promise resolver ${executor} is not a function`);
 
     this.state = state.PENDING;
-    this.onFulFilledChain = [];
-    this.onRejectedChain = [];
+    this.chainQueue = [];
     this.onFinallyChain = [];
     this._innerValue = undefined;
 
@@ -17,7 +17,7 @@ class BastardPromise {
   resolve = (value) => {
     if (this.state !== state.PENDING) return;
 
-    if (value != null && typeof value.then === "function") {
+    if (value != null && value instanceof BastardPromise) {
       const result = value.then(this.resolve.bind(this), this.reject.bind(this), "intermediateP");
       return result;
     }
@@ -25,12 +25,8 @@ class BastardPromise {
     this.state = state.FULFILLED;
     this._innerValue = value;
 
-    for (const { onCompleted } of this.onFulFilledChain) onCompleted(this._innerValue);
+    for (const { onFulFilled } of this.chainQueue) onFulFilled(this._innerValue);
     for (const onFinalized of this.onFinallyChain) onFinalized();
-
-    // console.log(
-    //   `Promise id: ${this.id}, resolved --- status-> ${this.state}, value-> ${this.internalValue}`
-    // );
   };
 
   reject = (error) => {
@@ -39,63 +35,56 @@ class BastardPromise {
     this.state = state.REJECTED;
     this._innerValue = error;
 
-    for (const onFailed of this.onRejectedChain) onFailed(this._innerValue);
-    for (const { onFailed } of this.onFulFilledChain) onFailed(error);
+    for (const { onRejected } of this.chainQueue) onRejected(this._innerValue);
     for (const onFinalized of this.onFinallyChain) onFinalized();
   };
 
-  then = (onComplete, onFail, id) => {
+  then = (onFulFill, onReject) => {
+    if (typeof onFulFill !== "function") throw TypeError("onFulFill is not a function");
+
     return new BastardPromise((resolve, reject) => {
-      //const onCompleted = (value) => resolve(onComplete(value));
+      const onRejected = this.getOnRejectedAction(resolve, reject, onReject);
+      const onFulFilled = this.getOnFulFilledAction(resolve, reject, onFulFill);
 
-      const onCompleted = (value) => {
-        try {
-          resolve(onComplete(value));
-        } catch (err) {
-          reject(err);
-        }
-      };
-
-      //const onFailed = (res) => (onFail != null ? reject(onFail(res)) : reject(res)); // first implementation
-      const onFailed = (res) => (onFail != null ? resolve(onFail(res)) : reject(res));
-      // const onFailed = (value) => {
-      //   try {
-      //     resolve(onFail(value));
-      //   } catch (err) {
-      //     reject(err);
-      //   }
-      // };
-
-      if (this.state == state.FULFILLED) onCompleted(this._innerValue);
-      else if (this.state == state.REJECTED) onFailed(this._innerValue);
-      else this.onFulFilledChain.push({ onCompleted, onFailed });
-    }, id);
+      if (this.state == state.FULFILLED) onFulFilled(this._innerValue);
+      else if (this.state == state.REJECTED) onRejected(this._innerValue);
+      else this.chainQueue.push({ onFulFilled, onRejected });
+    });
   };
 
-  catch = (onFail, id) => {
-    return new BastardPromise((resolve, reject) => {
-      const onFailed = (value) => {
-        try {
-          resolve(onFail(value));
-        } catch (err) {
-          reject(err);
-        }
-      };
-
-      if (this.state == state.REJECTED) onFailed(this._innerValue);
-      else if (this.state == state.FULFILLED) resolve(this._innerValue);
-      //call when the previous promises are completed without error.
-      else this.onRejectedChain.push(onFailed);
-    }, id);
-  };
+  catch = (onReject) => this.then(() => {}, onReject);
 
   finally = (onFinally) => {
     return new BastardPromise((resolve) => {
-      const onFinalized = (value) => resolve(onFinally());
+      const onFinalized = () => resolve(onFinally());
       if (this.state == state.FULFILLED) onFinalized();
       else this.onFinallyChain.push(onFinalized);
     });
   };
+
+  resolveOrFallback(resolve, reject) {
+    try {
+      resolve();
+    } catch (err) {
+      reject(err);
+    }
+  }
+
+  getOnRejectedAction = (resolve, reject, onReject) => {
+    return (value) => {
+      this.resolveOrFallback(
+        () => (onReject != null ? resolve(onReject(value)) : reject(value)),
+        reject
+      );
+    };
+  };
+
+  getOnFulFilledAction = (resolve, reject, onFulFill) => {
+    return (value) => {
+      this.resolveOrFallback(() => resolve(onFulFill(value)), reject);
+    };
+  };
+
   static all = (promises) => {
     let results = [];
     const reducedPromise = promises.reduce(
@@ -109,6 +98,8 @@ class BastardPromise {
     new Promise((res, rej) => {
       promises.forEach((p) => p.then(res).catch(rej));
     });
+
+  static resolve = (value) => new Promise((resolve) => resolve(value));
 }
 
 module.exports = BastardPromise;
