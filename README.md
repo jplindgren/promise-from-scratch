@@ -1,17 +1,13 @@
 # promise-from-scratch
 
 This repo is part of my blog post about understanding promises creating one from scratch.
+https://www.jplindgren.com/post/implementing-promises-from-scratch/
 
-Promise
+`npm test` will start the tests in watch mode.
 
-The beginning (callbacks)
-Javscript is non blocking, why?
-problems (callbackhell, control of inner method?)
+`bastard-promise.js` contains the code for our implemented promise.
 
-Promises come to rescue
-What is promise? It is a proxy to a async code, just a javascript object.
-how solve callback problems?
+`promisify.js` shows some examples of turning a callback to a promise.
 
-Implementing promise from scratch
-TDD
-Use scientist lib?
+`node promise-experiment` will trigger the scientits lib experiment.
+
