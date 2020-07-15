@@ -71,6 +71,23 @@ describe("Bastard Promises", () => {
         });
       });
 
+      it("should support chain of promises on which outside promises are returned", (done) => {
+        const outsidePromise = new Promise((resolve) =>
+          setTimeout(() => resolve({ file: "photo.jpg" }), 10)
+        );
+        return new BastardPromise((resolve) => {
+          setTimeout(() => resolve({ data: "promise1" }), 10);
+        })
+          .then((response) => {
+            expect(response.data).toBe("promise1");
+            return outsidePromise;
+          })
+          .then((response) => {
+            expect(response.file).toBe("photo.jpg");
+            done();
+          });
+      });
+
       it("should then and call finally afterall", (done) => {
         new BastardPromise((resolve) => setTimeout(() => resolve({ data: 777 }), 5))
           .then(({ data }) => expect(data).toBe(777))

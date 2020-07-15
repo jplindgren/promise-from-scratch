@@ -14,4 +14,4 @@ how solve callback problems?
 
 Implementing promise from scratch
 TDD
-Use scientist?
+Use scientist lib?

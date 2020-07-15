@@ -17,8 +17,8 @@ class BastardPromise {
   resolve = (value) => {
     if (this.state !== state.PENDING) return;
 
-    if (value != null && value instanceof BastardPromise) {
-      const result = value.then(this.resolve.bind(this), this.reject.bind(this), "intermediateP");
+    if (value != null && typeof value.then === "function") {
+      const result = value.then(this.resolve.bind(this), this.reject.bind(this));
       return result;
     }
 
